@@ -7,6 +7,9 @@
 # https://en.wikipedia.org/wiki/Principal_variation_search
 # FB36 - 20160831
 import os, copy
+import numpy as np
+
+
 n = 8  # board size (even)
 board = [['0' for x in range(n)] for y in range(n)]
 # 8 directions
@@ -89,6 +92,29 @@ def EvalBoard(board, player):
                     tot += 2  # side
                 else:
                     tot += 1
+    return tot
+
+
+position_value_matrix = np.array([[100, -20, 10,  5,  5, 10, -20, 100],
+                                  [-20, -50, -2, -2, -2, -2, -50, -20],
+                                  [ 10,  -2, -1, -1, -1, -1,  -2,  10],
+                                  [  5,  -2, -1, -1, -1, -1,  -2,   5],
+                                  [  5,  -2, -1, -1, -1, -1,  -2,   5],
+                                  [ 10,  -2, -1, -1, -1, -1,  -2,  10],
+                                  [-20, -50, -2, -2, -2, -2, -50, -20],
+                                  [100, -20, 10,  5,  5, 10, -20, 100]])
+
+
+our_minEvalBoard = np.sum(position_value_matrix[position_value_matrix < 0]) - 1
+our_maxEvalBoard = np.sum(position_value_matrix[position_value_matrix > 0]) + 1
+
+
+def our_EvalBoard(board, player):
+    tot = 0
+    for row in range(n):
+        for col in range(n):
+            if board[row, col] == player:
+                tot += position_value_matrix[row, col]
     return tot
 
 
@@ -268,8 +294,10 @@ def NegascoutSN(board, player, depth, alpha, beta, color):
 
 
 def BestMove(board, player):
-    maxPoints = 0
-    mx = -1; my = -1
+    maxPoints = our_minEvalBoard
+    points = our_minEvalBoard
+    mx = -1
+    my = -1
     for y in range(n):
         for x in range(n):
             if ValidMove(board, x, y, player):
@@ -292,9 +320,12 @@ def BestMove(board, player):
                     points = NegamaxABSN(boardTemp, player, depth, minEvalBoard, maxEvalBoard, 1)
                 elif opt == 8:
                     points = NegascoutSN(boardTemp, player, depth, minEvalBoard, maxEvalBoard, 1)
+                elif opt == 9:
+                    points = our_EvalBoard(boardTemp, player)
                 if points > maxPoints:
                     maxPoints = points
-                    mx = x; my = y
+                    mx = x
+                    my = y
     return (mx, my)
 
 
@@ -308,11 +339,13 @@ print('5: Negascout (Principal Variation Search)')
 print('6: Minimax w/ Alpha-Beta Pruning w/ Sorted Nodes')
 print('7: Negamax w/ Alpha-Beta Pruning w/ Sorted Nodes')
 print('8: Negascout (Principal Variation Search) w/ Sorted Nodes')
+print('9: Our EvalBoard with position value matrix from van Eck & van Wezel')
 opt = int(input('Select AI Algorithm: '))
-if opt > 0 and opt < 9:
+if 9 > opt > 0:
     depth = 4
     depthStr = input('Select Search Depth (DEFAULT: 4): ')
-    if depthStr != '': depth = int(depth)
+    if depthStr != '':
+        depth = int(depth)
 print('\n1: User 2: AI (Just press Enter for Exit!)')
 InitBoard()
 while True:
