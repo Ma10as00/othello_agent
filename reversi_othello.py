@@ -7,20 +7,22 @@
 # https://en.wikipedia.org/wiki/Principal_variation_search
 # FB36 - 20160831
 import os, copy
-n = 8 # board size (even)
+n = 8  # board size (even)
 board = [['0' for x in range(n)] for y in range(n)]
 # 8 directions
 dirx = [-1, 0, 1, -1, 1, -1, 0, 1]
 diry = [-1, -1, -1, 0, 0, 1, 1, 1]
 
+
 def InitBoard():
-    if n % 2 == 0: # if board size is even
+    if n % 2 == 0:  # if board size is even
         z = int((n - 2) / 2)
         board[z][z] = '2'
         board[n - 1 - z][z] = '1'        
         board[z][n - 1 - z] = '1'
         board[n - 1 - z][n - 1 - z] = '2'
-        
+
+ 
 def PrintBoard():
     m = len(str(n - 1))
     for y in range(n):
@@ -28,17 +30,18 @@ def PrintBoard():
         for x in range(n):
             row += board[y][x]
             row += ' ' * m
-        print (row + ' ' + str(y))
+        print(row + ' ' + str(y))
     # print
     row = ''
     for x in range(n):
         row += str(x).zfill(m) + ' '
-    print (row + '\n')
+    print(row + '\n')
 
-def MakeMove(board, x, y, player): # assuming valid move
-    totctr = 0 # total number of opponent pieces taken
+
+def MakeMove(board, x, y, player):  # assuming valid move
+    totctr = 0  # total number of opponent pieces taken
     board[y][x] = player
-    for d in range(8): # 8 directions
+    for d in range(8):  # 8 directions
         ctr = 0
         for i in range(n):
             dx = x + dirx[d] * (i + 1)
@@ -48,7 +51,8 @@ def MakeMove(board, x, y, player): # assuming valid move
             elif board[dy][dx] == player:
                 break
             elif board[dy][dx] == '0':
-                ctr = 0; break
+                ctr = 0
+                break
             else:
                 ctr += 1
         for i in range(ctr):
@@ -57,6 +61,7 @@ def MakeMove(board, x, y, player): # assuming valid move
             board[dy][dx] = player
         totctr += ctr
     return (board, totctr)
+
 
 def ValidMove(board, x, y, player):
     if x < 0 or x > n - 1 or y < 0 or y > n - 1:
@@ -68,20 +73,24 @@ def ValidMove(board, x, y, player):
         return False
     return True
 
-minEvalBoard = -1 # min - 1
-maxEvalBoard = n * n + 4 * n + 4 + 1 # max + 1
+
+minEvalBoard = -1  # min - 1
+maxEvalBoard = n * n + 4 * n + 4 + 1  # max + 1
+
+
 def EvalBoard(board, player):
     tot = 0
     for y in range(n):
         for x in range(n):
             if board[y][x] == player:
                 if (x == 0 or x == n - 1) and (y == 0 or y == n - 1):
-                    tot += 4 # corner
+                    tot += 4  # corner
                 elif (x == 0 or x == n - 1) or (y == 0 or y == n - 1):
-                    tot += 2 # side
+                    tot += 2  # side
                 else:
                     tot += 1
     return tot
+
 
 # if no valid move(s) possible then True
 def IsTerminalNode(board, player):
@@ -90,6 +99,7 @@ def IsTerminalNode(board, player):
             if ValidMove(board, x, y, player):
                 return False
     return True
+
 
 def GetSortedNodes(board, player):
     sortedNodes = []
@@ -102,6 +112,7 @@ def GetSortedNodes(board, player):
     sortedNodes = [node[0] for node in sortedNodes]
     return sortedNodes
 
+
 def Minimax(board, player, depth, maximizingPlayer):
     if depth == 0 or IsTerminalNode(board, player):
         return EvalBoard(board, player)
@@ -113,7 +124,7 @@ def Minimax(board, player, depth, maximizingPlayer):
                     (boardTemp, totctr) = MakeMove(copy.deepcopy(board), x, y, player)
                     v = Minimax(boardTemp, player, depth - 1, False)
                     bestValue = max(bestValue, v)
-    else: # minimizingPlayer
+    else:  # minimizingPlayer
         bestValue = maxEvalBoard
         for y in range(n):
             for x in range(n):
@@ -122,6 +133,7 @@ def Minimax(board, player, depth, maximizingPlayer):
                     v = Minimax(boardTemp, player, depth - 1, True)
                     bestValue = min(bestValue, v)
     return bestValue
+
 
 def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
     if depth == 0 or IsTerminalNode(board, player):
@@ -135,9 +147,9 @@ def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
                     v = max(v, AlphaBeta(boardTemp, player, depth - 1, alpha, beta, False))
                     alpha = max(alpha, v)
                     if beta <= alpha:
-                        break # beta cut-off
+                        break  # beta cut-off
         return v
-    else: # minimizingPlayer
+    else:  # minimizingPlayer
         v = maxEvalBoard
         for y in range(n):
             for x in range(n):
@@ -146,8 +158,9 @@ def AlphaBeta(board, player, depth, alpha, beta, maximizingPlayer):
                     v = min(v, AlphaBeta(boardTemp, player, depth - 1, alpha, beta, True))
                     beta = min(beta, v)
                     if beta <= alpha:
-                        break # alpha cut-off
+                        break  # alpha cut-off
         return v
+
 
 def AlphaBetaSN(board, player, depth, alpha, beta, maximizingPlayer):
     if depth == 0 or IsTerminalNode(board, player):
@@ -159,16 +172,17 @@ def AlphaBetaSN(board, player, depth, alpha, beta, maximizingPlayer):
             v = max(v, AlphaBetaSN(boardTemp, player, depth - 1, alpha, beta, False))
             alpha = max(alpha, v)
             if beta <= alpha:
-                break # beta cut-off
+                break  # beta cut-off
         return v
-    else: # minimizingPlayer
+    else:  # minimizingPlayer
         v = maxEvalBoard
         for boardTemp in sortedNodes:
             v = min(v, AlphaBetaSN(boardTemp, player, depth - 1, alpha, beta, True))
             beta = min(beta, v)
             if beta <= alpha:
-                break # alpha cut-off
+                break  # alpha cut-off
         return v
+
 
 def Negamax(board, player, depth, color):
     if depth == 0 or IsTerminalNode(board, player):
@@ -181,6 +195,7 @@ def Negamax(board, player, depth, color):
                 v = -Negamax(boardTemp, player, depth - 1, -color)
                 bestValue = max(bestValue, v)
     return bestValue
+
 
 def NegamaxAB(board, player, depth, alpha, beta, color):
     if depth == 0 or IsTerminalNode(board, player):
@@ -197,6 +212,7 @@ def NegamaxAB(board, player, depth, alpha, beta, color):
                     break
     return bestValue
 
+
 def NegamaxABSN(board, player, depth, alpha, beta, color):
     if depth == 0 or IsTerminalNode(board, player):
         return color * EvalBoard(board, player)
@@ -209,6 +225,7 @@ def NegamaxABSN(board, player, depth, alpha, beta, color):
         if alpha >= beta:
             break
     return bestValue
+
 
 def Negascout(board, player, depth, alpha, beta, color):
     if depth == 0 or IsTerminalNode(board, player):
@@ -230,6 +247,7 @@ def Negascout(board, player, depth, alpha, beta, color):
                     break
     return alpha
 
+
 def NegascoutSN(board, player, depth, alpha, beta, color):
     if depth == 0 or IsTerminalNode(board, player):
         return color * EvalBoard(board, player)
@@ -247,6 +265,7 @@ def NegascoutSN(board, player, depth, alpha, beta, color):
         if alpha >= beta:
             break
     return alpha
+
 
 def BestMove(board, player):
     maxPoints = 0
@@ -278,34 +297,35 @@ def BestMove(board, player):
                     mx = x; my = y
     return (mx, my)
 
-print ('REVERSI/OTHELLO BOARD GAME')
-print ('0: EvalBoard')
-print ('1: Minimax')
-print ('2: Minimax w/ Alpha-Beta Pruning')
-print ('3: Negamax')
-print ('4: Negamax w/ Alpha-Beta Pruning')
-print ('5: Negascout (Principal Variation Search)')
-print ('6: Minimax w/ Alpha-Beta Pruning w/ Sorted Nodes')
-print ('7: Negamax w/ Alpha-Beta Pruning w/ Sorted Nodes')
-print ('8: Negascout (Principal Variation Search) w/ Sorted Nodes')
+
+print('REVERSI/OTHELLO BOARD GAME')
+print('0: EvalBoard')
+print('1: Minimax')
+print('2: Minimax w/ Alpha-Beta Pruning')
+print('3: Negamax')
+print('4: Negamax w/ Alpha-Beta Pruning')
+print('5: Negascout (Principal Variation Search)')
+print('6: Minimax w/ Alpha-Beta Pruning w/ Sorted Nodes')
+print('7: Negamax w/ Alpha-Beta Pruning w/ Sorted Nodes')
+print('8: Negascout (Principal Variation Search) w/ Sorted Nodes')
 opt = int(input('Select AI Algorithm: '))
 if opt > 0 and opt < 9:
     depth = 4
     depthStr = input('Select Search Depth (DEFAULT: 4): ')
     if depthStr != '': depth = int(depth)
-print ('\n1: User 2: AI (Just press Enter for Exit!)')
+print('\n1: User 2: AI (Just press Enter for Exit!)')
 InitBoard()
 while True:
     for p in range(2):
         PrintBoard()
         player = str(p + 1)
-        print ('PLAYER: ' + player)
+        print('PLAYER: ' + player)
         if IsTerminalNode(board, player):
-            print ('Player cannot play! Game ended!')
-            print ('Score User: ' + str(EvalBoard(board, '1')))
-            print ('Score AI  : ' + str(EvalBoard(board, '2')))
+            print('Player cannot play! Game ended!')
+            print('Score User: ' + str(EvalBoard(board, '1')))
+            print('Score AI  : ' + str(EvalBoard(board, '2')))
             os._exit(0)            
-        if player == '1': # user's turn
+        if player == '1':  # user's turn
             while True:
                 xy = input('X Y: ')
                 if xy == '': os._exit(0)
@@ -313,13 +333,13 @@ while True:
                 x = int(x); y = int(y)
                 if ValidMove(board, x, y, player):
                     (board, totctr) = MakeMove(board, x, y, player)
-                    print ('# of pieces taken: ' + str(totctr))
+                    print('# of pieces taken: ' + str(totctr))
                     break
                 else:
-                    print ('Invalid move! Try again!')
-        else: # AI's turn
+                    print('Invalid move! Try again!')
+        else:  # AI's turn
             (x, y) = BestMove(board, player)
             if not (x == -1 and y == -1):
                 (board, totctr) = MakeMove(board, x, y, player)
-                print ('AI played (X Y): ' + str(x) + ' ' + str(y))
-                print ('# of pieces taken: ' + str(totctr))
+                print('AI played (X Y): ' + str(x) + ' ' + str(y))
+                print('# of pieces taken: ' + str(totctr))
