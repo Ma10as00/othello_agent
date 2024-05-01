@@ -13,8 +13,10 @@ import re
 ####################################
 n = 8 # board size (even)
 board = [['0' for x in range(n)] for y in range(n)]
-player_symbols = ['X', 'O'] 
+player_symbols = ['X', 'O']
 """List of symbols used when printing the discs of the respective players on the board."""
+no_player_str = "-"
+"""Symbol indicating an empty slot when printing the board."""
 # 8 directions
 dirx = [-1, 0, 1, -1, 1, -1, 0, 1]
 diry = [-1, -1, -1, 0, 0, 1, 1, 1]
@@ -36,7 +38,7 @@ def PrintBoard():
             if player_num: # if there is a disc on (x,y)
                 row += player_symbols[player_num-1]
             else: # player was 0 --> spot is empty
-                row += '-' 
+                row += no_player_str 
             row += ' ' * m
         print (row + ' ' + str(y))
     # print
@@ -88,19 +90,39 @@ position_values = np.array(
     [10, -2, -1, -1, -1, -1, -2, 10],
     [-20, -50, -2, -2, -2, -2, -50, -20],
     [100, -20, 10, 5, 5, 10, -20, 100]])
+"""the Value function from 
+    N. J. van Eck and M. van Wezel, “Application of reinforcement learning to the game of Othello”"""
 our_minEvalBoard = np.sum(position_values[position_values < 0])
 our_maxEvalBoard = np.sum(position_values[position_values > 0])
 
-def our_ev_board(board, player):
-    """Evaluating board based on the Value function from 
-    N. J. van Eck and M. van Wezel, “Application of reinforcement learning to the game of Othello” """
+def our_ev_board(board, player, value_function=position_values):
+    """Evaluating board based on the given value function.
+    - By default, value_function is set to be the one from N. J. van Eck and M. van Wezel, “Application of reinforcement learning to the game of Othello”.
+    - When changing value_function, make sure it is a 2-dim array of size n*n."""
     score = 0
     for row in range(n):
         for col in range(n):
             if board[row][col] == player:
-                score += position_values[row][col]
+                score += value_function[row][col]
     return score
 #####################################
+
+def count_board(board, player):
+    """Counting the total number of discs the given player has on the board."""
+    return our_ev_board(board, player, value_function=np.ones((n,n), dtype=int))
+
+def eval_board(board, player):
+    """Equivalent to the original EvalBoard(board, player). This function util"""
+    value_func = np.ones((n,n), dtype=int)
+    # Edges
+    value_func[0, :-1] = 2
+    value_func[:-1, 0] = 2
+    value_func[-1, :-1] = 2
+    value_func[:-1, -1] = 2
+    # Corners
+    value_func[(0, -1, 0, -1), (0, -1, -1, 0)] = 4
+    
+    return our_ev_board(board, player, value_function=value_func)
 
 minEvalBoard = -1 # min - 1
 maxEvalBoard = n * n + 4 * n + 4 + 1 # max + 1
@@ -314,6 +336,7 @@ def BestMove(board, player):
                     mx = x; my = y
     return (mx, my)
 
+eval_board(0,0)
 print ('REVERSI/OTHELLO BOARD GAME')
 print ('0: EvalBoard')
 print ('1: Minimax')
@@ -340,8 +363,8 @@ while True:
         print ('PLAYER: ' + player_symbols[p])
         if IsTerminalNode(board, player):
             print ('Player cannot play! Game ended!')
-            print ('Score User: ' + str(EvalBoard(board, '1')))
-            print ('Score AI  : ' + str(EvalBoard(board, '2')))
+            print ('Score User: ' + str(count_board(board, '1')))
+            print ('Score AI  : ' + str(count_board(board, '2')))
             os._exit(0)            
         if player == '1': # user's turn
             while True:
