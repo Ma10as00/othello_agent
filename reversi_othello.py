@@ -9,9 +9,12 @@
 import os, copy
 # Added imports ####################
 import numpy as np
+import re
 ####################################
 n = 8 # board size (even)
 board = [['0' for x in range(n)] for y in range(n)]
+player_symbols = ['X', 'O'] 
+"""List of symbols used when printing the discs of the respective players on the board."""
 # 8 directions
 dirx = [-1, 0, 1, -1, 1, -1, 0, 1]
 diry = [-1, -1, -1, 0, 0, 1, 1, 1]
@@ -29,7 +32,11 @@ def PrintBoard():
     for y in range(n):
         row = ''
         for x in range(n):
-            row += board[y][x]
+            player_num = int(board[y][x])
+            if player_num: # if there is a disc on (x,y)
+                row += player_symbols[player_num-1]
+            else: # player was 0 --> spot is empty
+                row += '-' 
             row += ' ' * m
         print (row + ' ' + str(y))
     # print
@@ -92,7 +99,6 @@ def our_ev_board(board, player):
         for col in range(n):
             if board[row][col] == player:
                 score += position_values[row][col]
-    print(f"Score was {score}")
     return score
 #####################################
 
@@ -331,7 +337,7 @@ while True:
     for p in range(2):
         PrintBoard()
         player = str(p + 1)
-        print ('PLAYER: ' + player)
+        print ('PLAYER: ' + player_symbols[p])
         if IsTerminalNode(board, player):
             print ('Player cannot play! Game ended!')
             print ('Score User: ' + str(EvalBoard(board, '1')))
@@ -341,6 +347,12 @@ while True:
             while True:
                 xy = input('X Y: ')
                 if xy == '': os._exit(0)
+                # Check if input is valid-----
+                valid_input = re.compile(f"^[0-{n-1}]\s[0-{n-1}]$")
+                if not re.fullmatch(valid_input, xy):
+                    print ('Invalid syntax! Try again!')
+                    continue 
+                # Input verified--------------
                 (x, y) = xy.split()
                 x = int(x); y = int(y)
                 if ValidMove(board, x, y, player):
