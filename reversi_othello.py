@@ -336,7 +336,6 @@ def BestMove(board, player):
                     mx = x; my = y
     return (mx, my)
 
-eval_board(0,0)
 print ('REVERSI/OTHELLO BOARD GAME')
 print ('0: EvalBoard')
 print ('1: Minimax')
