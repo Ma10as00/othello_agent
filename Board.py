@@ -50,10 +50,13 @@ class Board:
             row += str(x).zfill(m) + ' '
         print(row + '\n')
 
-    def make_move(self, x, y, player):
+    def make_move(self, x, y, player, board=None):
         totctr = 0  # total number of opponent pieces taken
         n = self.board_size
-        temp_board = copy.deepcopy(self.get_board())
+        if board is not None:
+            temp_board = board
+        else:
+            temp_board = copy.deepcopy(self.get_board())
         temp_board[y][x] = self.player_chars[player - 1]
         for dxx, dyy in zip(self.dirx, self.diry):  # 8 directions
             ctr = 0
@@ -77,11 +80,18 @@ class Board:
             totctr += ctr
         return temp_board, totctr
 
-    def valid_move(self, x, y, player):
+    def valid_move(self, x, y, player, board=None):
         n = self.board_size
         if x < 0 or x > n - 1 or y < 0 or y > n - 1:
             return False
-        if self.get_board()[y][x] != self.empty_char:
+        if board is not None:
+            if board[y][x] != self.empty_char:
+                return False
+            boardTemp, totctr = self.make_move(x, y, player, board)
+            if totctr == 0:
+                return False
+            return True
+        elif self.get_board()[y][x] != self.empty_char:
             return False
         boardTemp, totctr = self.make_move(x, y, player)
         if totctr == 0:
@@ -98,12 +108,16 @@ class Board:
         return tot
 
     # if no valid move(s) possible then True
-    def is_terminal_node(self, player):
+    def is_terminal_node(self, player, board=None):
         n = self.board_size
         for y in range(n):
             for x in range(n):
-                if self.valid_move(x, y, player):
-                    return False
+                if board is not None:
+                    if self.valid_move(x, y, player, board=board):
+                        return False
+                else:
+                    if self.valid_move(x, y, player):
+                        return False
         return True
 
     def get_sorted_nodes(self, player):
