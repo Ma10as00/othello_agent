@@ -73,40 +73,71 @@ class QLearningAgent:
         self.epsilon = epsilon
 
     def get_q_value(self, state, action):
-        state_key = tuple(map(tuple, state))  # Convert NumPy array to tuple of tuples
-        return self.q_table.get((state_key, action), 0.0)
-        # return self.q_table.get((state, action))
+        # state_key = tuple(map(tuple, state))  # Convert NumPy array to tuple of tuples
+        # return self.q_table.get((state_key, action), 0.0)
+        # try:
+        # print()
+        if self.q_table.get((state.copy().tobytes(), action.copy().tobytes())) is None:
+            self.q_table[(state.copy().tobytes(), action.copy().tobytes())] = 0.0
+
+        return self.q_table.get((state.copy().tobytes(), action.copy().tobytes()))
+        # except TypeError:
+        #     return self.q_table.get((state.tobytes(), action.tobytes()))
 
     def update_q_value(self, state, action, reward, next_state):
+        othello = Board()
+        state = othello.board_to_numpy(state.copy())
+        # print(state)
+        np_next_state = othello.board_to_numpy(next_state.copy())
         state_key = tuple(map(tuple, state))  # Convert NumPy array to tuple of tuples
         next_state_key = tuple(map(tuple, next_state))
         current_q = self.get_q_value(state, action)
-        max_future_q = max([self.get_q_value(next_state, a) for a in self.get_legal_actions(next_state)])
+        othello.set_board(next_state)
+        max_future_q = max([self.get_q_value(np_next_state, a) for a in self.get_legal_actions(othello)])
         new_q = (1 - self.learning_rate) * current_q + self.learning_rate * (reward + self.discount_factor * max_future_q)
-        self.q_table[(state_key, action)] = new_q
+        self.q_table[(state.copy().tobytes(), action.copy().tobytes())] = new_q
 
     @staticmethod
-    def get_legal_actions(state):
-        return state.get_sorted_nodes(1)
+    def get_legal_actions(board):
+        return board.get_sorted_nodes(1)
 
-    def choose_action(self, state):
+    def choose_action(self, board, state):
         if np.random.uniform(0, 1) < self.epsilon:
-            return np.random.choice(self.get_legal_actions(state))
+            actions = self.get_legal_actions(board)
+            # print(actions.shape)
+            # my_range = np.arange(0, actions.shape[0], 1)
+            # print(my_range)
+            # choice = np.random.choice(np.arange(0, actions.shape[0], 1))
+            # print(choice)
+            return 0, actions[np.random.choice(np.arange(0, actions.shape[0], 1))]
         else:
-            q_values = {a: self.get_q_value(state, a) for a in self.get_legal_actions(state)}
+            actions = self.get_legal_actions(board)
+            print(actions)
+            q_values = {}
+            for a in actions:
+                bited = a.copy().tobytes()
+                q_values[(state.copy().tobytes(), bited)] = self.get_q_value(state, a.copy())
+            print(actions)
+            print(q_values)
+            # q_values = {(state.copy().tobytes(), a.copy().tobytes()): self.get_q_value(state, a.copy()) for a in actions}
             return max(q_values, key=q_values.get)
 
     def train(self, episodes=1000):
         # othello = OthelloBoard()
         othello = Board()
+        othello.init_board()
+
         for _ in range(episodes):
             state = copy.deepcopy(othello.get_board())
-            action = self.choose_action(othello)
+            np_state = othello.board_to_numpy(state).copy()
+            action = np.frombuffer(self.choose_action(othello, np_state)[1], dtype=np.int8)
+            print('hi')
+            print(action)
             othello.make_move(action[0], action[1], player=1)
             next_state = copy.deepcopy(othello.get_board())
             # Reward function (you can define your own)
             reward = self.calculate_reward(state, action, next_state)
-            self.update_q_value(state.tobytes(), action, reward, next_state.tobytes())
+            self.update_q_value(state, action, reward, next_state)
 
     @staticmethod
     def calculate_reward(state, action, next_state):
@@ -124,6 +155,7 @@ class QLearningAgent:
 
 my_q_learning_agent = QLearningAgent()
 print(my_q_learning_agent.q_table)
+np.random.seed(42)
 my_q_learning_agent.train(100)
 
 print(my_q_learning_agent.q_table)

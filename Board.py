@@ -32,6 +32,17 @@ class Board:
             self.board[z][z + 1] = self.player_chars[1]
             self.board[z + 1][z + 1] = self.player_chars[0]
 
+    def board_to_numpy(self, board):
+        n = len(board)
+        np_board = np.zeros((n, n), dtype=np.int8)
+        for x in range(n):
+            for y in range(n):
+                if board[x][y] == self.player_chars[0]:
+                    np_board[x][y] = 1
+                if board[x][y] == self.player_chars[1]:
+                    np_board[x][y] = 2
+        return np_board
+
     def set_board(self, bd):
         self.board = bd
 
@@ -127,9 +138,10 @@ class Board:
             for x in range(n):
                 if self.valid_move(x, y, player):
                     boardTemp, totctr = self.make_move(x, y, player)
-                    sortedNodes.append((boardTemp, self.our_EvalBoard(boardTemp, player)))
+                    boardTemp2 = self.board_to_numpy(boardTemp)
+                    sortedNodes.append((np.array((x, y), dtype=np.int8), self.our_EvalBoard(boardTemp, player)))
         sortedNodes = sorted(sortedNodes, key=lambda node: node[1], reverse=True)
-        sortedNodes = [node[0] for node in sortedNodes]
+        sortedNodes = np.array([node[0] for node in sortedNodes])
         return sortedNodes
 
     def get_board(self):
