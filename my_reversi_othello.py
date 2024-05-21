@@ -67,8 +67,8 @@ while True:
         print(f'PLAYER: {player} as {board.player_chars[player - 1]}')
         if board.is_terminal_node(player):
             print('Player cannot play! Game ended!')
-            print('Score User: ' + str(board.our_EvalBoard(board.get_board(), 1)))
-            print('Score AI  : ' + str(board.our_EvalBoard(board.get_board(), 2)))
+            print('Score User: ' + str(board.count_board(board.get_board(), 1)))
+            print('Score AI  : ' + str(board.count_board(board.get_board(), 2)))
             exit(0)
         if player == 1:  # user's turn
             while True:

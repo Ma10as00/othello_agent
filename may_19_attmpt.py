@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 from collections import deque
 import random
+import copy
+from Board import Board
 
 
 torch.manual_seed(123)
@@ -30,7 +32,7 @@ class QNetwork(nn.Module):
     def forward(self, state):
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
-        return self.linear3(x)
+        return F.sigmoid(self.linear3(x))
 
 
 class ReplayBuffer:
@@ -66,20 +68,75 @@ class ReplayBuffer:
         return len(self.memory)
 
 
-policy_network = QNetwork(n_states=4, n_actions=2, hidden_dim=128).to(device)
+board_size = 8
+board = Board(board_size=board_size)
+# print(board.get_board())
+# print(board.board_to_numpy(board.get_board()))
+# print(board.our_EvalBoard(board.get_board(), 2))
+# print(board.count_board(board.get_board(), 2))
+
+n_states = n_actions = board_size ** 2
+
+action_board = np.arange(0, n_actions, 1).reshape(board.board_to_numpy().shape)
+# print(action_board)
+
+
+def get_state(board):
+    np_board = board.board_to_numpy(board.get_board())
+    return np_board.flatten()
+
+
+def get_legal_actions(board, player):
+    actions = board.get_sorted_nodes(player)
+    return get_legal_action_indices(actions)
+
+
+def get_legal_action_indices(actions):
+    vals = np.zeros(n_actions, dtype=int)
+    for x, y in actions:
+        vals[action_board[x, y]] = 1
+    return vals
+
+
+def apply_filter(output, legal_actions):
+    output[np.where(legal_actions == 0)[0]] = 0
+    return output
+
+
+def check_reward(board, state):
+    p1 = board.count_board(state, player=1)
+    p2 = board.count_board(state, player=2)
+    # if p1 > p2:
+    #     return 1
+    # elif p2 > p1:
+    #     return -1
+    # else:
+    #     return 0
+    return p1 - p2  # return # discs player 1 (our agent) has - # discs player 2 has
+
+
+actions = board.get_sorted_nodes(1)
+# print(get_legal_action_indices(actions))
+# print(get_legal_action_indices(actions).reshape(action_board.shape))
+# exit(0)
+
+
+policy_network = QNetwork(n_states=n_states, n_actions=n_actions, hidden_dim=128).to(device)
 policy_optimizer = torch.optim.Adam(params=policy_network.parameters(), lr=5e-4)
-target_network = QNetwork(n_states=4, n_actions=2, hidden_dim=128).to(device)
+target_network = QNetwork(n_states=n_states, n_actions=n_actions, hidden_dim=128).to(device)
 
 
 def parameter_update(source_model, target_model, tau):
     for target_param, source_param in zip(target_model.parameters(), source_model.parameters()):
-        target_param.data.copy_(tau * source_param.data + (1.0 - tau)*target_param.data)
+        target_param.data.copy_(tau * source_param.data + (1.0 - tau) * target_param.data)
 
 
-env = gym.make('CartPole-v1')
+# env = gym.make('CartPole-v1')
+# env = othello board play yay
 
-NUM_TRAJECTORIES = 2000
-MAX_EPISODE_LENGTH = 500
+# NUM_TRAJECTORIES = 2000
+MAX_EPISODE_LENGTH = 4 * n_states
+NUM_TRAJECTORIES = 5000
 
 gamma = 0.99
 EPSILON = 0.05
@@ -94,36 +151,83 @@ policy_losses = []
 # declaring the replay buffer
 transition_buffer = ReplayBuffer(10000)
 # iterating through trajectories
+
+
 for tau in tqdm(range(NUM_TRAJECTORIES)):
     # resetting the environment
-    state, info = env.reset(seed=123)
-
-    # TODO: Need to add board.reset() option which returns the board
+    # state, info = env.reset(seed=123)
+    board = Board(board_size=board_size)
 
     # setting done to False for while loop
     done = False
     t = 0
-    while done == False and t < MAX_EPISODE_LENGTH:
+    player = 1
+    reward = 0
+    while not done and t < MAX_EPISODE_LENGTH:
         # retrieving Q(s, a) for all possible a
-        action_q_values = policy_network(torch.tensor(state).to(device))
+        state = get_state(board)
+        # print(state)
+        legal_actions = get_legal_actions(board, player=player)
+
+        if len(np.where(legal_actions == 1)[0]) == 0:
+            # If no legal moves for player, skip and change players
+            t += 1
+            if player == 1:
+                player = 2
+            else:
+                player = 1
+            continue
+
+        action_q_values = apply_filter(policy_network(torch.tensor(state).to(device)), legal_actions)
+        # print(np.where(legal_actions == 1)[0])
+        # print(action_q_values)
+
         # epsilon-greedy action
-        # TODO: Think about number of actions are available to our model, what should output side be...???
         action = np.random.choice(
-            [torch.argmax(action_q_values.flatten()).detach().cpu().numpy(),
-             np.random.choice([0, 1])],
+            [torch.argmax(action_q_values).detach().cpu().numpy(),
+             np.random.choice(np.where(legal_actions == 1)[0])],
             p=[1 - EPSILON, EPSILON])
+        # print(action)
         # keeping track of previous state
-        prev_state = state
+        prev_state = state.copy()
         # environment step
-        state, reward, done, truncation, info = env.step(action)
-        # TODO: Our 'board.step' equivalent is 'board.make_move()', need to return board state, reward, 'done,' and more
+        x_val, y_val = np.where(action_board == action)
+        state_post_move, num_flip = board.make_move(x_val[0], y_val[0], player=player)
+        assert num_flip > 0, 'Number of tiles flipped is 0, this is an illegal move'
+        board.set_board(copy.deepcopy(state_post_move))
+        state = get_state(board)
+        # print(state)
+        #
+        # print(board.is_terminal_node(player=1, board=state_post_move))
+        done = (board.is_terminal_node(player=1, board=state_post_move) and
+                board.is_terminal_node(player=2, board=state_post_move))
+
+        if done:
+            # reward = 1 if player 1 has more discs, 0 if =, -1 if fewer
+            # reward = 100 * check_reward(board, state_post_move)
+            reward = check_reward(board, state_post_move)
+            if reward < 0:
+                reward *= 10
+            else:
+                reward *= 5
+        else:
+            reward = 0
+            # reward = num_flip
+
+        # state, reward, done, truncation, info = env.step(action)
 
         transition_buffer.append((prev_state, action, reward, state, done))
+        # print(state.copy().reshape((4, 4)))
 
         t += 1
+        if player == 1:
+            player = 2
+        else:
+            player = 1
 
     # logging the episode length as a cumulative reward
-    cumulative_rewards.append(t)
+    # cumulative_rewards.append(t)
+    cumulative_rewards.append(reward)
 
     if len(transition_buffer) > WARMUP:
         states, actions, rewards, next_states, dones = transition_buffer.sample(sample_size=BATCH_SIZE)
@@ -134,6 +238,7 @@ for tau in tqdm(range(NUM_TRAJECTORIES)):
         expected_values = rewards + gamma * q_target * (torch.ones(BATCH_SIZE).to(device) - dones)
         # selecting Q-values of actions taken, using current policy network
         # gather() takes only values indicated by a given index, in this case, action taken
+        # TODO: CHECKOUT WHAT THE ACTIONS ARE DOING HERE, NEED TO RECALC LEGAL MOVES???
         output = policy_network(states).gather(1, actions.view(-1, 1))
         # computing the loss between r + γ * max Q(s',a) and Q(s,a)
         loss = F.mse_loss(output.flatten(), expected_values)
@@ -145,9 +250,9 @@ for tau in tqdm(range(NUM_TRAJECTORIES)):
         parameter_update(policy_network, target_network, SOFT_UPDATE)
 
 
-plt.figure(figsize=(12,9))
-plt.plot(running_mean(cumulative_rewards, 50))
+plt.figure(figsize=(12, 9))
+plt.plot(running_mean(cumulative_rewards, 100))
 plt.title("DQN cumulative rewards")
 plt.grid()
 
-
+plt.show()
