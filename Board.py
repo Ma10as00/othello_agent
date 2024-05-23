@@ -97,19 +97,22 @@ class Board:
         n = self.board_size
         if row < 0 or row > n - 1 or col < 0 or col > n - 1:
             return False
-        if board is not None:
-            if board[row][col] != self.empty_char:
-                return False
-            boardTemp, totctr = self.make_move(row, col, player, board)
-            if totctr == 0:
-                return False
-            return True
-        elif self.get_board()[row][col] != self.empty_char:
+        if board is None:
+            board = copy.deepcopy(self.get_board())
+        # print(board)
+        # if board is not None:
+        if board[row][col] != self.empty_char:
             return False
-        boardTemp, totctr = self.make_move(row, col, player)
+        boardTemp, totctr = self.make_move(row, col, player, board)
         if totctr == 0:
             return False
         return True
+        # elif self.get_board()[row][col] != self.empty_char:
+        #     return False
+        # boardTemp, totctr = self.make_move(row, col, player)
+        # if totctr == 0:
+        #     return False
+        # return True
 
     def our_EvalBoard(self, b, player, value_function=None):
         tot = 0
@@ -127,15 +130,13 @@ class Board:
 
     # if no valid move(s) possible then True
     def is_terminal_node(self, player, board=None):
+        if board is None:
+            board = copy.deepcopy(self.get_board())
         n = self.board_size
         for row in range(n):
             for col in range(n):
-                if board is not None:
-                    if self.valid_move(row, col, player, board=board):
-                        return False
-                else:
-                    if self.valid_move(row, col, player):
-                        return False
+                if self.valid_move(row, col, player, board=board):
+                    return False
         return True
 
     def get_sorted_nodes(self, player, value_function=None):
@@ -155,4 +156,4 @@ class Board:
         return sortedNodes
 
     def get_board(self):
-        return self.board
+        return copy.deepcopy(self.board)

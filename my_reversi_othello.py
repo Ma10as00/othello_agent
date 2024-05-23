@@ -1,5 +1,12 @@
+import time
+
+import utils
 from players import *
 from Board import Board
+import torch
+import numpy as np
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def BestMove(board_state, player):
@@ -10,16 +17,16 @@ def BestMove(board_state, player):
     mx = -1
     my = -1
     n = board.board_size
-    for y in range(n):
-        for x in range(n):
-            if board.valid_move(x, y, player):
-                board_temp, totctr = board.make_move(x, y, player)
+    for row in range(n):
+        for col in range(n):
+            if board.valid_move(row, col, player):
+                board_temp, totctr = board.make_move(row, col, player)
                 if opt == 0:
                     points = board.our_EvalBoard(board_temp, player)
                 elif opt == 1:
                     points = Minimax(board_temp, player, depth, True)
                 elif opt == 2:
-                    points = AlphaBeta(board, player, depth, board.minEvalBoard, board.maxEvalBoard, True)
+                    points = AlphaBeta(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, True)
                 elif opt == 3:
                     points = Negamax(board_temp, player, depth, 1)
                 elif opt == 4:
@@ -27,7 +34,7 @@ def BestMove(board_state, player):
                 elif opt == 5:
                     points = Negascout(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
                 elif opt == 6:
-                    points = AlphaBetaSN(board, player, depth, board.minEvalBoard, board.maxEvalBoard, True)
+                    points = AlphaBetaSN(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, True)
                 elif opt == 7:
                     points = NegamaxABSN(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
                 elif opt == 8:
@@ -36,8 +43,8 @@ def BestMove(board_state, player):
                     points = board.our_EvalBoard(board_temp, player)
                 if points > max_points:
                     max_points = points
-                    mx = x
-                    my = y
+                    mx = row
+                    my = col
     return mx, my
 
 
@@ -60,31 +67,51 @@ if 9 > opt > 0:
         depth = int(depth)
 print('\n1: User 2: AI (Just press Enter for Exit!)')
 board = Board()
+
+file_name = f'{board.board_size}x{board.board_size}_model.pth'
+our_model = utils.load_trained_network(file_name, device=device)
+action_board = utils.generate_action_board(board.board_size)
+start = time.time()
 while True:
     for p in range(2):
         board.print_board()
         player = p + 1
         print(f'PLAYER: {player} as {board.player_chars[player - 1]}')
-        if board.is_terminal_node(player):
+        if board.is_terminal_node(1) and board.is_terminal_node(2):
             print('Player cannot play! Game ended!')
             print('Score User: ' + str(board.count_board(board.get_board(), 1)))
             print('Score AI  : ' + str(board.count_board(board.get_board(), 2)))
+            print(f'Time Elapsed: {round(time.time() - start, 2)}')
             exit(0)
+        if board.is_terminal_node(player):
+            continue
         if player == 1:  # user's turn
-            while True:
-                xy = input('X Y: ')
-                if xy == '':
-                    exit(0)
-                (x, y) = xy.split()
-                x = int(x)
-                y = int(y)
-                if board.valid_move(x, y, player):
-                    temp_board, totctr = board.make_move(x, y, player)
-                    print('# of pieces taken: ' + str(totctr))
-                    board.set_board(temp_board)
-                    break
-                else:
-                    print('Invalid move! Try again!')
+            state = utils.get_state(board)
+            legal_actions = utils.get_legal_actions(board, player=1, action_board=action_board)
+
+            action_q_values = utils.apply_filter(our_model(torch.tensor(state).to(device)), legal_actions)
+
+            action = torch.argmax(action_q_values).detach().cpu().numpy()
+
+            x_val, y_val = np.where(action_board == action)
+            temp_board, totctr = board.make_move(x_val[0], y_val[0], player=1)
+
+            print('# of pieces taken: ' + str(totctr))
+            board.set_board(temp_board)
+            # while True:
+            #     xy = input('X Y: ')
+            #     if xy == '':
+            #         exit(0)
+            #     (x, y) = xy.split()
+            #     x = int(x)
+            #     y = int(y)
+            #     if board.valid_move(x, y, player):
+            #         temp_board, totctr = board.make_move(x, y, player)
+            #         print('# of pieces taken: ' + str(totctr))
+            #         board.set_board(temp_board)
+            #         break
+            #     else:
+            #         print('Invalid move! Try again!')
         else:  # AI's turn
             x, y = BestMove(board.get_board(), player)
             if not (x == -1 and y == -1):
