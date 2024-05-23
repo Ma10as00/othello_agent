@@ -8,7 +8,6 @@ import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
 def BestMove(board_state, player):
     board = Board()
     board.set_board(board_state)
@@ -40,7 +39,7 @@ def BestMove(board_state, player):
                 elif opt == 8:
                     points = NegascoutSN(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
                 elif opt == 9:
-                    points = board.our_EvalBoard(board_temp, player)
+                    points = board.our_EvalBoard(board_temp, player, board.position_value_matrix)
                 if points > max_points:
                     max_points = points
                     mx = row

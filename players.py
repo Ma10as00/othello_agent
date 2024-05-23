@@ -57,7 +57,7 @@ def AlphaBeta(board_state, player, depth, alpha, beta, maximizingPlayer):
                     beta = min(beta, v)
                 if beta <= alpha:
                     break  # beta cut-off
-        return v
+    return v
 
 
 def AlphaBetaSN(board_state, player, depth, alpha, beta, maximizingPlayer):
