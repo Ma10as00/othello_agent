@@ -68,7 +68,7 @@ class ReplayBuffer:
         return len(self.memory)
 
 
-board_size = 8
+board_size = 4
 board = Board(board_size=board_size)
 # print(board.get_board())
 # print(board.board_to_numpy(board.get_board()))
@@ -136,7 +136,7 @@ def parameter_update(source_model, target_model, tau):
 
 # NUM_TRAJECTORIES = 2000
 MAX_EPISODE_LENGTH = 4 * n_states
-NUM_TRAJECTORIES = 5000
+NUM_TRAJECTORIES = 2000
 
 gamma = 0.99
 EPSILON = 0.05
@@ -182,11 +182,19 @@ for tau in tqdm(range(NUM_TRAJECTORIES)):
         # print(np.where(legal_actions == 1)[0])
         # print(action_q_values)
 
+        # TODO: Run through legal actions and find Q function for opponent
+
+        a = [torch.argmax(action_q_values).detach().cpu().numpy(),
+             np.random.choice(np.where(legal_actions == 1)[0])]
         # epsilon-greedy action
         action = np.random.choice(
-            [torch.argmax(action_q_values).detach().cpu().numpy(),
-             np.random.choice(np.where(legal_actions == 1)[0])],
+            a,  # [0, 1],
             p=[1 - EPSILON, EPSILON])
+        # if action:
+        #     print('I am dead')
+        # else:
+        #     print('I am alive')
+        # action = a[action]
         # print(action)
         # keeping track of previous state
         prev_state = state.copy()
@@ -238,7 +246,6 @@ for tau in tqdm(range(NUM_TRAJECTORIES)):
         expected_values = rewards + gamma * q_target * (torch.ones(BATCH_SIZE).to(device) - dones)
         # selecting Q-values of actions taken, using current policy network
         # gather() takes only values indicated by a given index, in this case, action taken
-        # TODO: CHECKOUT WHAT THE ACTIONS ARE DOING HERE, NEED TO RECALC LEGAL MOVES???
         output = policy_network(states).gather(1, actions.view(-1, 1))
         # computing the loss between r + γ * max Q(s',a) and Q(s,a)
         loss = F.mse_loss(output.flatten(), expected_values)
@@ -248,6 +255,11 @@ for tau in tqdm(range(NUM_TRAJECTORIES)):
         policy_optimizer.step()
         # soft parameter update
         parameter_update(policy_network, target_network, SOFT_UPDATE)
+
+
+file_name = f'{board_size}x{board_size}_model.pth'
+# Save Learned Policy Network
+torch.save(policy_network.state_dict(), file_name)
 
 
 plt.figure(figsize=(12, 9))
