@@ -76,17 +76,18 @@ while True:
         board.print_board()
         player = p + 1
         print(f'PLAYER: {player} as {board.player_chars[player - 1]}')
-        if board.is_terminal_node(1) and board.is_terminal_node(2):
+        if (board.is_terminal_node(1, copy.deepcopy(board.get_board()))
+                and board.is_terminal_node(2, copy.deepcopy(board.get_board()))):
             print('Player cannot play! Game ended!')
             print('Score User: ' + str(board.count_board(board.get_board(), 1)))
             print('Score AI  : ' + str(board.count_board(board.get_board(), 2)))
             print(f'Time Elapsed: {round(time.time() - start, 2)}')
             exit(0)
-        if board.is_terminal_node(player):
+        if board.is_terminal_node(player, copy.deepcopy(board.get_board())):
             continue
         if player == 1:  # user's turn
             state = utils.get_state(board)
-            legal_actions = utils.get_legal_actions(board, player=1, action_board=action_board)
+            legal_actions = utils.get_legal_actions(board, player=1)  # , action_board=action_board)
 
             action_q_values = utils.apply_filter(our_model(torch.tensor(state).to(device)), legal_actions)
 

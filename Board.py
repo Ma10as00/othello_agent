@@ -35,15 +35,13 @@ class Board:
     def board_to_numpy(self, board=None):
         if board is None:
             board = self.get_board()
-        n = len(board)
-        np_board = np.zeros((n, n), dtype=np.float32)
-        for row in range(n):
-            for col in range(n):
-                if board[row][col] == self.player_chars[0]:
-                    np_board[row][col] = 1
-                if board[row][col] == self.player_chars[1]:
-                    np_board[row][col] = 2
-        return np_board
+
+        np_board = np.array(board)
+        np_board[np_board == self.player_chars[0]] = 1
+        np_board[np_board == self.player_chars[1]] = 2
+        np_board[np_board == self.empty_char] = 0
+
+        return np.array(np_board, dtype=np.float32)
 
     def set_board(self, bd):
         self.board = bd
@@ -103,7 +101,7 @@ class Board:
         # if board is not None:
         if board[row][col] != self.empty_char:
             return False
-        boardTemp, totctr = self.make_move(row, col, player, board)
+        _, totctr = self.make_move(row, col, player, board)
         if totctr == 0:
             return False
         return True
@@ -115,23 +113,25 @@ class Board:
         # return True
 
     def our_EvalBoard(self, b, player, value_function=None):
-        tot = 0
+        # tot = 0
         if value_function is None:
             value_function = np.ones((self.board_size, self.board_size), dtype=int)
-        n = self.board_size
-        for row in range(n):
-            for col in range(n):
-                if b[row][col] == self.player_chars[player - 1]:
-                    tot += value_function[row][col]
+        # n = self.board_size
+        # b = np.array(b)
+        tot = np.sum(value_function[np.array(b) == self.player_chars[player - 1]])
+        # for row in range(n):
+        #     for col in range(n):
+        #         if b[row][col] == self.player_chars[player - 1]:
+        #             tot += value_function[row][col]
         return tot
 
     def count_board(self, b, player):
-        return self.our_EvalBoard(b, player, value_function=np.ones((self.board_size, self.board_size), dtype=int))
+        return self.our_EvalBoard(b, player)#, value_function=np.ones((self.board_size, self.board_size), dtype=int))
 
     # if no valid move(s) possible then True
     def is_terminal_node(self, player, board=None):
         if board is None:
-            board = copy.deepcopy(self.get_board())
+            board = self.get_board()
         n = self.board_size
         for row in range(n):
             for col in range(n):
@@ -140,20 +140,20 @@ class Board:
         return True
 
     def get_sorted_nodes(self, player, value_function=None):
-        if not value_function:
-            value_function = np.ones((self.board_size, self.board_size), dtype=int)
+        # if not value_function:
+        #     value_function = np.ones((self.board_size, self.board_size), dtype=int)
         n = self.board_size
-        sortedNodes = []
+        sorted_nodes = []
         for row in range(n):
             for col in range(n):
                 if self.valid_move(row, col, player):
-                    boardTemp, totctr = self.make_move(row, col, player)
-                    boardTemp2 = self.board_to_numpy(boardTemp)
-                    sortedNodes.append((np.array((row, col), dtype=np.int8),
-                                        self.our_EvalBoard(boardTemp, player, value_function=value_function)))
-        sortedNodes = sorted(sortedNodes, key=lambda node: node[1], reverse=True)
-        sortedNodes = np.array([node[0] for node in sortedNodes])
-        return sortedNodes
+                    board_temp, totctr = self.make_move(row, col, player)
+                    # boardTemp2 = self.board_to_numpy(boardTemp)
+                    sorted_nodes.append((np.array((row, col), dtype=np.int8),
+                                        self.our_EvalBoard(board_temp, player, value_function=value_function)))
+        sorted_nodes = sorted(sorted_nodes, key=lambda node: node[1], reverse=True)
+        sorted_nodes = np.array([node[0] for node in sorted_nodes])
+        return sorted_nodes
 
     def get_board(self):
-        return copy.deepcopy(self.board)
+        return self.board

@@ -1,6 +1,7 @@
 import random
 import torch
 from collections import deque
+import numpy as np
 
 
 class ReplayBuffer:
@@ -22,6 +23,11 @@ class ReplayBuffer:
             rewards.append(x[2])
             next_states.append(x[3])
             dones.append(x[4])
+        states = np.array(states)
+        actions = np.array(actions)
+        rewards = np.array(rewards)
+        next_states = np.array(next_states)
+        dones = np.array(dones)
         states = torch.tensor(states).to(device)
         actions = torch.tensor(actions).to(device)
         rewards = torch.tensor(rewards).to(device)

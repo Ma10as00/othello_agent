@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-import gymnasium as gym
+# import gymnasium as gym
 import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
@@ -22,7 +22,7 @@ N_ACTIONS = BOARD_SIZE ** 2
 
 
 if __name__ == '__main__':
-    board = Board(board_size=BOARD_SIZE)
+    # board = Board(board_size=BOARD_SIZE)
     action_board = utils.generate_action_board(board_size=BOARD_SIZE)
     # print(board.get_board())
     # print(board.board_to_numpy(board.get_board()))
@@ -44,8 +44,10 @@ if __name__ == '__main__':
     # env = othello board play yay
 
     # NUM_TRAJECTORIES = 2000
-    MAX_EPISODE_LENGTH = 4 * N_STATES
-    NUM_TRAJECTORIES = 14000
+    MAX_EPISODE_LENGTH = 2 * N_STATES
+    n_flips = 0
+    NUM_TRAJECTORIES = 20000
+    save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 1000 == 0 or t == NUM_TRAJECTORIES - 1]
 
     gamma = 0.99
     EPSILON = 0.05
@@ -61,7 +63,6 @@ if __name__ == '__main__':
     transition_buffer = ReplayBuffer(10000, seed=RANDOM_SEED)
     # iterating through trajectories
 
-
     for tau in tqdm(range(NUM_TRAJECTORIES)):
         # resetting the environment
         # state, info = env.reset(seed=123)
@@ -69,23 +70,30 @@ if __name__ == '__main__':
 
         # setting done to False for while loop
         done = False
-        t = 0
+        # t = 0
         player = 1
         reward = 0
-        while not done and t < MAX_EPISODE_LENGTH:
+        while not done:  # and t < MAX_EPISODE_LENGTH:
             # retrieving Q(s, a) for all possible a
             state = utils.get_state(board)
             # print(state)
-            legal_actions = utils.get_legal_actions(board, player=player, action_board=action_board)
+            legal_actions = utils.get_legal_actions(board, player=player)  # action_board=action_board)
 
-            if np.sum(legal_actions) == 0:
+            if not legal_actions.any():
                 # If no legal moves for player, skip and change players
-                t += 1
+                n_flips += 1
+                if n_flips == 2:
+                    reward = utils.check_reward(board, state)
+                    # print('flipped!')
+                    # board.print_board()
+                    break
                 if player == 1:
                     player = 2
                 else:
                     player = 1
                 continue
+
+            n_flips = 0
 
             action_q_values = utils.apply_filter(policy_network(torch.tensor(state).to(device)), legal_actions)
             # print(np.where(legal_actions == 1)[0])
@@ -136,7 +144,7 @@ if __name__ == '__main__':
             transition_buffer.append((prev_state, action, reward, state, done))
             # print(state.copy().reshape((4, 4)))
 
-            t += 1
+            # t += 1
             if player == 1:
                 player = 2
             else:
@@ -165,10 +173,14 @@ if __name__ == '__main__':
             # soft parameter update
             utils.parameter_update(policy_network, target_network, SOFT_UPDATE)
 
+        if tau in save_iters:
+            file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
+            torch.save(policy_network.state_dict(), file_name)
 
-    file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_model.pth'
-    # Save Learned Policy Network
-    torch.save(policy_network.state_dict(), file_name)
+
+    # file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_model.pth'
+    # # Save Learned Policy Network
+    # torch.save(policy_network.state_dict(), file_name)
 
     # model = QNetwork(n_states=n_states, n_actions=n_actions, hidden_dim=128)
     # model.load_state_dict(torch.load(file_name))

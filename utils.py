@@ -3,6 +3,9 @@ import torch
 from QNetwork import QNetwork
 
 
+action_board = None
+
+
 # running mean function for the purpose of visualization
 def running_mean(x, N):
     cumsum = np.cumsum(np.insert(x, 0, 0))
@@ -15,7 +18,9 @@ def parameter_update(source_model, target_model, tau):
 
 
 def generate_action_board(board_size):
-    return np.arange(0, board_size ** 2, 1).reshape((board_size, board_size))
+    global action_board
+    action_board = np.arange(0, board_size ** 2, 1).reshape((board_size, board_size))
+    return action_board
 
 
 def get_state(board):
@@ -23,12 +28,11 @@ def get_state(board):
     return np_board.flatten()
 
 
-def get_legal_actions(board, player, action_board):
-    actions = board.get_sorted_nodes(player)
-    return get_legal_action_indices(board.board_size, actions, action_board)
+def get_legal_actions(board, player):#, action_board):
+    return get_legal_action_indices(board.board_size, actions=board.get_sorted_nodes(player))#, action_board)
 
 
-def get_legal_action_indices(board_size, actions, action_board):
+def get_legal_action_indices(board_size, actions):#, action_board):
     vals = np.zeros(board_size ** 2, dtype=int)
     for x, y in actions:
         vals[action_board[x, y]] = 1
@@ -36,7 +40,7 @@ def get_legal_action_indices(board_size, actions, action_board):
 
 
 def apply_filter(output, legal_actions):
-    output[np.where(legal_actions == 0)[0]] = 0
+    output[legal_actions == 0] = 0
     return output
 
 
