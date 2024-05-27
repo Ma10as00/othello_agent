@@ -1,5 +1,4 @@
 import time
-
 import utils
 from players import *
 from Board import Board
@@ -8,11 +7,12 @@ import numpy as np
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def BestMove(board_state, player):
+
+def BestMove(board_state, player, hmmm=False):
     board = Board()
     board.set_board(board_state)
-    max_points = board.minEvalBoard
-    points = board.minEvalBoard
+    max_points = -np.infty
+    points = -np.infty
     mx = -1
     my = -1
     n = board.board_size
@@ -21,23 +21,31 @@ def BestMove(board_state, player):
             if board.valid_move(row, col, player):
                 board_temp, totctr = board.make_move(row, col, player)
                 if opt == 0:
-                    points = board.our_EvalBoard(board_temp, player)
+                    points = board.their_eval_board(board_temp, player)
                 elif opt == 1:
                     points = Minimax(board_temp, player, depth, True)
                 elif opt == 2:
-                    points = AlphaBeta(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, True)
+                    points = AlphaBeta(board_temp, player, depth,
+                                       board.minEvalBoard, board.maxEvalBoard, True)
                 elif opt == 3:
                     points = Negamax(board_temp, player, depth, 1)
                 elif opt == 4:
-                    points = NegamaxAB(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
+                    points = NegamaxAB(board_temp, player, depth,
+                                       board.minEvalBoard, board.maxEvalBoard, 1)
                 elif opt == 5:
-                    points = Negascout(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
+                    points = Negascout(board_temp, player, depth,
+                                       board.minEvalBoard, board.maxEvalBoard, 1)
                 elif opt == 6:
-                    points = AlphaBetaSN(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, True)
+                    points = AlphaBetaSN(board_temp, player, depth,
+                                         board.minEvalBoard, board.maxEvalBoard, True)
                 elif opt == 7:
-                    points = NegamaxABSN(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
+                    points = NegamaxABSN(board_temp, player, depth,
+                                         board.minEvalBoard, board.maxEvalBoard, 1)
                 elif opt == 8:
-                    points = NegascoutSN(board_temp, player, depth, board.minEvalBoard, board.maxEvalBoard, 1)
+                    points = NegascoutSN(board_temp, player, depth,
+                                         board.minEvalBoard, board.maxEvalBoard, 1, hmmm)
+                    if hmmm:
+                        print(points)
                 elif opt == 9:
                     points = board.our_EvalBoard(board_temp, player, board.position_value_matrix)
                 if points > max_points:
@@ -67,11 +75,13 @@ if 9 > opt > 0:
 print('\n1: User 2: AI (Just press Enter for Exit!)')
 board = Board()
 
-file_name = f'{board.board_size}x{board.board_size}_model.pth'
+file_name = f'8x8_long_train/{board.board_size}x{board.board_size}_model_step_40000.pth'
 our_model = utils.load_trained_network(file_name, device=device)
 action_board = utils.generate_action_board(board.board_size)
 start = time.time()
+move = 0
 while True:
+    move += 1
     for p in range(2):
         board.print_board()
         player = p + 1
@@ -87,11 +97,15 @@ while True:
             continue
         if player == 1:  # user's turn
             state = utils.get_state(board)
-            legal_actions = utils.get_legal_actions(board, player=1)  # , action_board=action_board)
+            legal_actions = utils.get_legal_action_indices(board, player=1)  # , action_board=action_board)
 
             action_q_values = utils.apply_filter(our_model(torch.tensor(state).to(device)), legal_actions)
-
             action = torch.argmax(action_q_values).detach().cpu().numpy()
+
+            if move < 3:
+                legal_actions[action] = 0
+                a = np.random.choice(np.where(legal_actions == 1)[0])
+                action = np.random.choice([action, a], p=[0.5, 0.5])
 
             x_val, y_val = np.where(action_board == action)
             temp_board, totctr = board.make_move(x_val[0], y_val[0], player=1)

@@ -161,14 +161,22 @@ def Negascout(board_state, player, depth, alpha, beta, color):
     return alpha
 
 
-def NegascoutSN(board_state, player, depth, alpha, beta, color):
+def NegascoutSN(board_state, player, depth, alpha, beta, color, hmmm=False):
     board = Board()
     board.set_board(board_state)
+    if hmmm:
+        print('hello', alpha, beta)
+        board.print_board()
     if depth == 0 or board.is_terminal_node(player):
-        return color * board.our_EvalBoard(board.get_board(), player)
+        if hmmm:
+            print('help me')
+        return color * board.their_eval_board(board.get_board(), player)
     sorted_nodes = board.get_sorted_nodes(player)
     first_child = True
     board_temp = board.get_board()
+    if hmmm:
+        print('first move')
+        print(sorted_nodes)
     for moves in sorted_nodes:
         board_temp, _ = board.make_move(moves[0], moves[1], player, board_temp)
         if not first_child:
@@ -181,4 +189,5 @@ def NegascoutSN(board_state, player, depth, alpha, beta, color):
         alpha = max(alpha, score)
         if alpha >= beta:
             break
+
     return alpha

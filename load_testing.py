@@ -11,6 +11,15 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 file_name = f'{board_size}x{board_size}_model.pth'
 trained_model = utils.load_trained_network(file_name, device)
 
+
+stuff = [[1, 2], [3, 4]]
+new_stuff = stuff.copy()
+
+print(stuff, new_stuff)
+
+new_stuff[0][1] = 5
+
+print(stuff, new_stuff)
 # board = Board(board_size=board_size)
 # state = utils.get_state(board)
 # action_board = utils.generate_action_board(board_size)
