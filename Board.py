@@ -115,7 +115,7 @@ class Board:
         totctr = 0  # total number of opponent pieces taken
         n = self.board_size
         if board is not None:
-            temp_board = board
+            temp_board = copy.deepcopy(board)
         else:
             temp_board = copy.deepcopy(self.get_board())
         temp_board[row][col] = self.player_chars[player - 1]
