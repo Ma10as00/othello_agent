@@ -17,13 +17,13 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 np.random.seed(RANDOM_SEED)
 
 # Set global information
-BOARD_SIZE = 8
+BOARD_SIZE = 4
 HIDDEN_DIM_SIZE = 128
 N_STATES = BOARD_SIZE ** 2
 N_ACTIONS = BOARD_SIZE ** 2
 
 # Set number of training iterations and indices for which an intermediate model should be saved
-NUM_TRAJECTORIES = 90000
+NUM_TRAJECTORIES = 20000
 save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 2500 == 0 or t == NUM_TRAJECTORIES - 1]
 
 # warmup steps to collect the data first
@@ -94,63 +94,37 @@ if __name__ == '__main__':
 
             n_flips = 0  # This means that there was at least one legal move, so no change of players
 
-            # If player == 2 handles the prebuilt 'player's' turn
-            if player == 2:
-                max_points = -np.infty
-                points = -np.infty
-                mx = -1
-                my = -1
-                # Check all valid moves, keep track of the best one
-                for row in range(BOARD_SIZE):
-                    for col in range(BOARD_SIZE):
-                        if board.valid_move(row, col, player):
-                            board_temp, totctr = board.make_move(row, col, player)
-                            points = board.our_EvalBoard(board_temp, player, board.position_value_matrix)
-                            if points > max_points:
-                                max_points = points
-                                mx = row
-                                my = col
+            # Get Q values from our network for all legal moves
+            action_q_values = utils.apply_filter(policy_network(torch.tensor(state).to(device)), legal_actions)
 
-                prev_state = state.copy()
+            # Action list, best Q action, random action
+            a = [torch.argmax(action_q_values).detach().cpu().numpy(),
+                 np.random.choice(np.where(legal_actions == 1)[0])]
 
-                # Play best action
-                action = action_board[mx][my]
-                state_post_move, totctr = board.make_move(mx, my, player)
-
-                board.set_board(copy.deepcopy(state_post_move))
-                state = utils.get_state(board)
+            if t < 5:  # Early game robust-ness, to increase variety in opening moves
+                action = np.random.choice(a, p=[0.5, 0.5])
             else:
-                # Get Q values from our network for all legal moves
-                action_q_values = utils.apply_filter(policy_network(torch.tensor(state).to(device)), legal_actions)
+                # epsilon-greedy action
+                action = np.random.choice(
+                    a, p=[1 - EPSILON, EPSILON])
 
-                # Action list, best Q action, random action
-                a = [torch.argmax(action_q_values).detach().cpu().numpy(),
-                     np.random.choice(np.where(legal_actions == 1)[0])]
+            # keeping track of previous state
+            prev_state = state.copy()
 
-                if t < 5:  # Early game robust-ness, to increase variety in opening moves
-                    action = np.random.choice(a, p=[0.5, 0.5])
-                else:
-                    # epsilon-greedy action
-                    action = np.random.choice(
-                        a, p=[1 - EPSILON, EPSILON])
+            # environment step, make chosen action
+            x_val, y_val = np.where(action_board == action)
+            state_post_move, num_flip = board.make_move(x_val[0], y_val[0], player=player)
 
-                # keeping track of previous state
-                prev_state = state.copy()
+            # Ensure model chose a legal action
+            if num_flip <= 0:
+                board.print_board()
+                print(f'number of flipped pieces for move: {x_val}, {y_val} is 0')
+                err = True
+                break
+            # assert num_flip > 0, 'Number of tiles flipped is 0, this is an illegal move'
 
-                # environment step, make chosen action
-                x_val, y_val = np.where(action_board == action)
-                state_post_move, num_flip = board.make_move(x_val[0], y_val[0], player=player)
-
-                # Ensure model chose a legal action
-                if num_flip <= 0:
-                    board.print_board()
-                    print(f'number of flipped pieces for move: {x_val}, {y_val} is 0')
-                    err = True
-                    break
-                # assert num_flip > 0, 'Number of tiles flipped is 0, this is an illegal move'
-
-                board.set_board(copy.deepcopy(state_post_move))
-                state = utils.get_state(board)
+            board.set_board(copy.deepcopy(state_post_move))
+            state = utils.get_state(board)
 
             # Check if next state is a terminal node (has no legal actions) for both players
             done = (board.is_terminal_node(player=1, board_state=state_post_move) and
@@ -203,7 +177,7 @@ if __name__ == '__main__':
 
         # if epoch == a saving iteration, save model to allow for external benchmarking/validation
         if tau in save_iters:
-            file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_long_train/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
+            file_name = f'4x4_non_sigmoid/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
             torch.save(policy_network.state_dict(), file_name)
 
     # Plot training curve (iteration reward curve)
