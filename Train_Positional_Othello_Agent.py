@@ -23,8 +23,8 @@ N_STATES = BOARD_SIZE ** 2
 N_ACTIONS = BOARD_SIZE ** 2
 
 # Set number of training iterations and indices for which an intermediate model should be saved
-NUM_TRAJECTORIES = 90000
-save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 2500 == 0 or t == NUM_TRAJECTORIES - 1]
+NUM_TRAJECTORIES = 2000
+save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 100 == 0 or t == NUM_TRAJECTORIES - 1]
 
 # warmup steps to collect the data first
 WARMUP = 1000
@@ -203,7 +203,7 @@ if __name__ == '__main__':
 
         # if epoch == a saving iteration, save model to allow for external benchmarking/validation
         if tau in save_iters:
-            file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_long_train/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
+            file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_non_sigmoid/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
             torch.save(policy_network.state_dict(), file_name)
 
     # Plot training curve (iteration reward curve)
