@@ -32,4 +32,4 @@ class QNetwork(nn.Module):
         """
         x = F.relu(self.linear1(state))
         x = F.relu(self.linear2(x))
-        return F.sigmoid(self.linear3(x))
+        return self.linear3(x)

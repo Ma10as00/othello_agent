@@ -92,7 +92,7 @@ def apply_filter(output, mask):
     Return:
         masked output
     """
-    output[mask == 0] = 0
+    output[mask == 0] = -np.infty
     return output
 
 
