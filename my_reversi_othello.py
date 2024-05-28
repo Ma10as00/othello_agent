@@ -75,7 +75,8 @@ if 9 > opt > 0:
 print('\n1: User 2: AI (Just press Enter for Exit!)')
 board = Board()
 
-file_name = f'8x8_long_train/{board.board_size}x{board.board_size}_model_step_40000.pth'
+# file_name = f'8x8_long_train/{board.board_size}x{board.board_size}_model_step_77500.pth'
+file_name = f'8x8_non_sigmoid/{board.board_size}x{board.board_size}_model_step_1999.pth'
 our_model = utils.load_trained_network(file_name, device=device)
 action_board = utils.generate_action_board(board.board_size)
 start = time.time()
@@ -97,21 +98,25 @@ while True:
             continue
         if player == 1:  # user's turn
             state = utils.get_state(board)
-            legal_actions = utils.get_legal_action_indices(board, player=1)  # , action_board=action_board)
+            legal_actions = utils.get_legal_action_indices(board, player=1)
 
-            action_q_values = utils.apply_filter(our_model(torch.tensor(state).to(device)), legal_actions)
-            action = torch.argmax(action_q_values).detach().cpu().numpy()
+            if np.sum(legal_actions) == 1:
+                action = np.argmax(legal_actions)
+            else:
+                action_q_values = utils.apply_filter(our_model(torch.tensor(state).to(device)), legal_actions)
+                action = torch.argmax(action_q_values).detach().cpu().numpy()
 
-            if move < 3:
-                legal_actions[action] = 0
-                a = np.random.choice(np.where(legal_actions == 1)[0])
-                action = np.random.choice([action, a], p=[0.5, 0.5])
+                if move < 3:
+                    legal_actions[action] = 0
+                    a = np.random.choice(np.where(legal_actions == 1)[0])
+                    action = np.random.choice([action, a], p=[0.5, 0.5])
 
             x_val, y_val = np.where(action_board == action)
             temp_board, totctr = board.make_move(x_val[0], y_val[0], player=1)
 
             print('# of pieces taken: ' + str(totctr))
             board.set_board(temp_board)
+
             # while True:
             #     xy = input('X Y: ')
             #     if xy == '':
