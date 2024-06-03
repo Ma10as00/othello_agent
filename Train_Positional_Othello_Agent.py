@@ -23,7 +23,7 @@ N_STATES = BOARD_SIZE ** 2
 N_ACTIONS = BOARD_SIZE ** 2
 
 # Set number of training iterations and indices for which an intermediate model should be saved
-NUM_TRAJECTORIES = 2000
+NUM_TRAJECTORIES = 10000
 save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 100 == 0 or t == NUM_TRAJECTORIES - 1]
 
 # warmup steps to collect the data first
@@ -32,7 +32,7 @@ WARMUP = 1000
 # NN-training parameters
 gamma = 0.99
 EPSILON = 0.1
-EPSILON_DECAY = 0.99995
+EPSILON_DECAY = 0.99975
 SOFT_UPDATE = 0.01
 BATCH_SIZE = 512
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
                 n_flips += 1
                 # If you have flipped twice, it means infinite loop found, check reward, break
                 if n_flips == 2:
-                    reward = utils.check_reward(board, board.get_board())
+                    reward = utils.check_reward(board, board.get_board(), current_player=player)
                     break
                 if player == 1:
                     player = 2
@@ -158,7 +158,7 @@ if __name__ == '__main__':
 
             if done:  # Game is over
                 # reward = number of disks player 1 - number of disks player 2
-                reward = utils.check_reward(board, state_post_move)
+                reward = utils.check_reward(board, state_post_move, current_player=player)
             else:
                 reward = 0
 
@@ -203,9 +203,10 @@ if __name__ == '__main__':
 
         # if epoch == a saving iteration, save model to allow for external benchmarking/validation
         if tau in save_iters:
-            file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_non_sigmoid/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
+            file_name = f'{BOARD_SIZE}x{BOARD_SIZE}_idk/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
             torch.save(policy_network.state_dict(), file_name)
 
+    np.savetxt('8x8_idk/iteration_rewards.txt', iteration_rewards)
     # Plot training curve (iteration reward curve)
     plt.figure(figsize=(12, 9))
     plt.plot(utils.running_mean(iteration_rewards, 100))

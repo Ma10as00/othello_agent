@@ -17,22 +17,23 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 np.random.seed(RANDOM_SEED)
 
 # Set global information
-BOARD_SIZE = 4
+BOARD_SIZE = 8
 HIDDEN_DIM_SIZE = 128
 N_STATES = BOARD_SIZE ** 2
 N_ACTIONS = BOARD_SIZE ** 2
 
 # Set number of training iterations and indices for which an intermediate model should be saved
-NUM_TRAJECTORIES = 20000
-save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 2500 == 0 or t == NUM_TRAJECTORIES - 1]
+NUM_TRAJECTORIES = 15000
+save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 100 == 0 or t == NUM_TRAJECTORIES - 1]
 
 # warmup steps to collect the data first
 WARMUP = 1000
 
 # NN-training parameters
 gamma = 0.99
-EPSILON = 0.1
-EPSILON_DECAY = 0.99995
+EPSILON = 0.05
+# EPSILON_DECAY = 0.99995
+EPSILON_DECAY = 1.
 SOFT_UPDATE = 0.01
 BATCH_SIZE = 512
 
@@ -84,7 +85,7 @@ if __name__ == '__main__':
                 n_flips += 1
                 # If you have flipped twice, it means infinite loop found, check reward, break
                 if n_flips == 2:
-                    reward = utils.check_reward(board, board.get_board())
+                    reward = utils.check_reward(board, board.get_board(), current_player=player)
                     break
                 if player == 1:
                     player = 2
@@ -101,7 +102,7 @@ if __name__ == '__main__':
             a = [torch.argmax(action_q_values).detach().cpu().numpy(),
                  np.random.choice(np.where(legal_actions == 1)[0])]
 
-            if t < 5:  # Early game robust-ness, to increase variety in opening moves
+            if t < 0:  # Early game robust-ness, to increase variety in opening moves
                 action = np.random.choice(a, p=[0.5, 0.5])
             else:
                 # epsilon-greedy action
@@ -132,7 +133,7 @@ if __name__ == '__main__':
 
             if done:  # Game is over
                 # reward = number of disks player 1 - number of disks player 2
-                reward = utils.check_reward(board, state_post_move)
+                reward = utils.check_reward(board, state_post_move, current_player=player)
             else:
                 reward = 0
 
@@ -177,9 +178,10 @@ if __name__ == '__main__':
 
         # if epoch == a saving iteration, save model to allow for external benchmarking/validation
         if tau in save_iters:
-            file_name = f'4x4_non_sigmoid/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
+            file_name = f'8x8_models_2/{BOARD_SIZE}x{BOARD_SIZE}_model_step_{tau}.pth'
             torch.save(policy_network.state_dict(), file_name)
 
+    np.savetxt('8x8_models_2/iteration_rewards.txt', iteration_rewards)
     # Plot training curve (iteration reward curve)
     plt.figure(figsize=(12, 9))
     plt.plot(utils.running_mean(iteration_rewards, 100))
