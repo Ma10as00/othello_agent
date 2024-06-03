@@ -102,24 +102,24 @@ while iteration:
 
         if player == PLAYER:  # user's turn
             while True:
-                xy = input('X Y: ')
-                if xy == '' or xy == 'q':
+                row_col = input('ROW COL: ')
+                if row_col == '' or row_col == 'q':
                     exit(0)
-                (x, y) = xy.split()
-                x = int(x)
-                y = int(y)
-                if board.valid_move(x, y, player):
-                    temp_board, totctr = board.make_move(x, y, player)
+                (row, col) = row_col.split()
+                row = int(row)
+                col = int(col)
+                if board.valid_move(row, col, player):
+                    temp_board, totctr = board.make_move(row, col, player)
                     print('# of pieces taken: ' + str(totctr))
                     board.set_board(temp_board)
                     break
                 else:
                     print('Invalid move! Try again!')
         else:  # AI's turn
-            x, y = BestMove(board.get_board(), player, move)
-            if not (x == -1 and y == -1):
-                temp_board, totctr = board.make_move(x, y, player)
-                print('AI played (X Y): ' + str(x) + ' ' + str(y))
+            row, col = BestMove(board.get_board(), player, move)
+            if not (row == -1 and col == -1):
+                temp_board, totctr = board.make_move(row, col, player)
+                print('AI played (ROW COL): ' + str(row) + ' ' + str(col))
                 print('# of pieces taken: ' + str(totctr))
                 board.set_board(temp_board)
     move += 1
