@@ -96,7 +96,7 @@ def apply_filter(output, mask):
     return output
 
 
-def check_reward(board, board_state):
+def check_reward(board, board_state, current_player):
     """
     Gets the total reward from the current board and state of play
     Arguments:
@@ -105,9 +105,10 @@ def check_reward(board, board_state):
     Return:
         int points player 1 - points player 2
     """
-    p1 = board.count_board(board_state, player=1)  # Points player 1
-    p2 = board.count_board(board_state, player=2)  # Points player 2
-    return p1 - p2
+    opposite_player = 1 if current_player == 2 else 2
+    current_player_discs = board.count_board(board_state, player=current_player)  # Points player 1
+    opposite_player_discs = board.count_board(board_state, player=opposite_player)  # Points player 2
+    return current_player_discs - opposite_player_discs
 
 
 def get_network_attributes(state_dict):
