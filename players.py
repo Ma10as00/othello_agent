@@ -9,6 +9,12 @@
 import copy
 
 from Board import Board
+import utils
+import numpy as np
+import torch
+
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def Minimax(board_state, player, depth, maximizingPlayer):
@@ -191,3 +197,37 @@ def NegascoutSN(board_state, player, depth, alpha, beta, color, hmmm=False):
             break
 
     return alpha
+
+
+def get_our_move(file_name, board, player, move):
+    action_board = utils.generate_action_board(board.board_size)
+
+    state = utils.get_state(board)
+    legal_actions = utils.get_legal_action_indices(board, player=player)
+
+    our_model = utils.load_trained_network(file_name, device=device)
+
+
+    if np.sum(legal_actions) == 1:
+        action = np.argmax(legal_actions)
+    else:
+        action_q_values = utils.apply_filter(our_model(torch.tensor(state).to(device)), legal_actions)
+        action = torch.argmax(action_q_values).detach().cpu().numpy()
+
+        if move < 3:
+            legal_actions[action] = 0
+            a = np.random.choice(np.where(legal_actions == 1)[0])
+            action = np.random.choice([action, a], p=[0.5, 0.5])
+
+    x_val, y_val = np.where(action_board == action)
+    return x_val[0], y_val[0]
+
+
+def our_self_learned_player(board, player, move):
+    return get_our_move(file_name='8x8_target_learner_2/8x8_model_step_14999.pth',
+                        board=board, player=player, move=move)
+
+
+def our_positional_learned_player(board, player, move):
+    return get_our_move(file_name='8x8_position_learning/8x8_model_step_29999.pth',
+                        board=board, player=player, move=move)
