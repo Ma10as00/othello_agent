@@ -24,6 +24,7 @@ N_ACTIONS = BOARD_SIZE ** 2
 
 # Set number of training iterations and indices for which an intermediate model should be saved
 NUM_TRAJECTORIES = 10000
+# save model every 100 training iterations
 save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 100 == 0 or t == NUM_TRAJECTORIES - 1]
 
 # warmup steps to collect the data first
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     # declaring the replay buffer
     transition_buffer = ReplayBuffer(10000, seed=RANDOM_SEED)
 
-    err = False
+    err = False  # Error handling flag
 
     # iterating through trajectories
     for tau in tqdm(range(NUM_TRAJECTORIES)):
@@ -94,7 +95,7 @@ if __name__ == '__main__':
 
             n_flips = 0  # This means that there was at least one legal move, so no change of players
 
-            # If player == 2 handles the prebuilt 'player's' turn
+            # If player == 2 handles the positional player's turn
             if player == 2:
                 max_points = -np.infty
                 points = -np.infty
@@ -147,8 +148,8 @@ if __name__ == '__main__':
                     print(f'number of flipped pieces for move: {x_val}, {y_val} is 0')
                     err = True
                     break
-                # assert num_flip > 0, 'Number of tiles flipped is 0, this is an illegal move'
 
+                # Set board to next state
                 board.set_board(copy.deepcopy(state_post_move))
                 state = utils.get_state(board)
 
@@ -171,6 +172,7 @@ if __name__ == '__main__':
             else:
                 player = 1
 
+        # If an error is encountered, skip this training step
         if err:
             err = False
             continue
@@ -198,6 +200,7 @@ if __name__ == '__main__':
             policy_optimizer.step()
             # soft parameter update
             utils.parameter_update(policy_network, target_network, SOFT_UPDATE)
+
             # Decay Epsilon value
             EPSILON *= EPSILON_DECAY
 

@@ -24,6 +24,7 @@ N_ACTIONS = BOARD_SIZE ** 2
 
 # Set number of training iterations and indices for which an intermediate model should be saved
 NUM_TRAJECTORIES = 15000
+# save model every 100 training iterations
 save_iters = [t for t in range(NUM_TRAJECTORIES) if t % 100 == 0 or t == NUM_TRAJECTORIES - 1]
 
 # warmup steps to collect the data first
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     # declaring the replay buffer
     transition_buffer = ReplayBuffer(10000, seed=RANDOM_SEED)
 
-    err = False
+    err = False  # Error handling flag
 
     # iterating through trajectories
     for tau in tqdm(range(NUM_TRAJECTORIES)):
@@ -102,7 +103,8 @@ if __name__ == '__main__':
             a = [torch.argmax(action_q_values).detach().cpu().numpy(),
                  np.random.choice(np.where(legal_actions == 1)[0])]
 
-            if t < 0:  # Early game robust-ness, to increase variety in opening moves
+            # Early game robust-ness, to increase variety in opening moves, set to 0 for fixed starting play
+            if t < 0:
                 action = np.random.choice(a, p=[0.5, 0.5])
             else:
                 # epsilon-greedy action
@@ -122,8 +124,8 @@ if __name__ == '__main__':
                 print(f'number of flipped pieces for move: {x_val}, {y_val} is 0')
                 err = True
                 break
-            # assert num_flip > 0, 'Number of tiles flipped is 0, this is an illegal move'
 
+            # Set board to next state
             board.set_board(copy.deepcopy(state_post_move))
             state = utils.get_state(board)
 
@@ -146,6 +148,7 @@ if __name__ == '__main__':
             else:
                 player = 1
 
+        # If an error is encountered, skip this training step
         if err:
             err = False
             continue
@@ -173,6 +176,7 @@ if __name__ == '__main__':
             policy_optimizer.step()
             # soft parameter update
             utils.parameter_update(policy_network, target_network, SOFT_UPDATE)
+
             # Decay Epsilon value
             EPSILON *= EPSILON_DECAY
 
