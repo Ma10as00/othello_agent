@@ -5,10 +5,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 import copy
-from Board import Board
-from QNetwork import QNetwork
-import utils
-from ReplayBuffer import ReplayBuffer
+from Environment.Board import Board
+from Environment.QNetwork import QNetwork
+import Environment.utils as utils
+from Environment.ReplayBuffer import ReplayBuffer
 
 # Set all random seeds
 RANDOM_SEED = 123

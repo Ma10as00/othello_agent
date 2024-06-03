@@ -1,5 +1,5 @@
-from players import *
-from Board import Board
+from Environment.players import *
+from Environment.Board import Board
 import torch
 import numpy as np
 
