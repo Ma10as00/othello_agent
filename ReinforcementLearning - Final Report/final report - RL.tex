@@ -28,10 +28,6 @@ To check the progress of the model's learning, we have our learning agent play a
 Then, we outline the algorithms we use for our analysis. In the end, we close with a summary of our experimental results.
 
 \section{Overview of the project's chronology}
-\begin{verbatim}
-    #TODO (optional): Do the project?
-    #TODO: Strike out the line above, give or take...
-\end{verbatim}
 
 \begin{enumerate}
     \item We started by improving the interface to interact with the agents. This is important for human interpretation of the scenario.
@@ -54,7 +50,7 @@ A brief description of the Othello board game follows. Opponents with opposing c
 
 \subsection{\label{doc:env_desc}Environment Description}
 
-The design of our environment takes into account a number of common pieces: the state space, the set of actions, and the transition function. There are also a number of situationally dependent portions: the reward, the utility, the policy, and the value function. The state is easily represented as the current state of the board, which considers the number of opposing discs, the number of our own discs, and the positions of each disc. The set of actions is a layer which is the size of the Othello board where we simply apply a mask of the list of legal moves at the current state. The transition function is a deterministic function which indicates which discs will be flipped once an action has been played. The reward function for the positional agent is adapted slightly from the van Eck and van Wezel paper, and is given as the difference between the number of discs owned by player 1 minus those of player 2 if the game is in an end state, or 0 if we are not in an end state. We also implement a random starting strategy for the first three moves of the game. During the learning phase we implement an \textit{Epsilon Greedy} policy to make the next move with a decay rate starting after the learning warm up phase. 
+The design of our environment takes into account a number of common pieces: the state space, the set of actions, and the transition function. There are also a number of situationally dependent portions: the reward, the utility, the policy, and the value function. The state is easily represented as the current state of the board, which considers the number of opposing discs, the number of our own discs, and the positions of each disc. The set of actions is a layer which is the size of the Othello board where we simply apply a mask of the list of legal moves at the current state. The transition function is a deterministic function which indicates which discs will be flipped once an action has been played. The reward function for the positional agent is adapted slightly from the van Eck and van Wezel paper, and is given as the difference between the number of discs owned by player 1 minus those of player 2 if the game is in an end state, or 0 if we are not in an end state. We also implement a random starting strategy for the first three moves of the game. This was added to the learning agent to visit more possible game states to improve robustness when playing against different players. During the learning phase we implement an \textit{Epsilon Greedy} policy to make the next move with an exponential decay rate starting after the learning warm up phase. 
 % Since these are the only options considered by their models, the utility function is irrelevant to the decision making process in the learning phase \cite{vanEck2008}.
 
 \subsection{\label{doc:env_agnts}Environment Agents}
@@ -75,13 +71,13 @@ We are using an environment for the Othello game \cite{codes}, containing one po
 \end{itemize}
 
 \subsection{\label{doc:env_func}Environment Functions}
-The environment provides us with a few native functions that we take advantage of when implementing our playing agent\cite{codes}. The environment has been converted into a \texttt{Board} class which maintains the current state of the game and handles all of the below functions.
+The environment provides us with a few native functions that we take advantage of when implementing our playing agent\cite{codes}. The environment has been converted into a \texttt{Board} class which maintains the current state of the game and handles all of the functions below.
 \begin{itemize}
     \item \texttt{InitBoard()}: Initialises the board in Othello starting position.
     \item \texttt{PrintBoard()}: Prints the current state of the board.
     \item \texttt{MakeMove()}: Assuming a valid move is provided, the agent makes the move at the specified position. Returns the board in its updated state and the count of how many tiles were flipped in the move-makers favour.
     \item \texttt{ValidMove()}: Checks if the move provided is valid. Returns boolean result
-    \item \texttt{EvalBoard()}: Naively calculates the value of the board assuming corners are worth 4 points, edges are worth 2 points, and interior points are worth one point. The function returns the total board score.
+    \item \texttt{EvalBoard()}: Naively calculates the value of the board assuming corners are worth 4 points, edges are worth 2 points, and interior cells are worth one point. The function returns the total board score. In our \texttt{Board} class this function is called: \texttt{their\_eval\_board()}
     \item \texttt{IsTerminalNode()}: If there are no valid moves, the function returns true and marks the end of the game.
     \item \texttt{GetSortedNodes()}: Plays all possible moves for the agent and calculates the value of the board for each such move. Then the results are sorted in decreasing order: Highest valued moves first.
     \item \texttt{BestMove()}: Returns the best move according to the indicated playing agent.
@@ -91,6 +87,7 @@ We added a few functions to the environment which were necessary for the trainin
     \item \texttt{set\_board()}: Sets \texttt{Board.board} to the passed in board state.
     \item \texttt{board\_to\_numpy()}: Converts user friendly appearance board to numpy board.
     \item \texttt{count\_board()}: Counts the number of discs the provided player has.
+    \item \texttt{our\_EvalBoard()}: Evaluates the value of a position given a certain value function, like the one presented in section \ref{doc:positional}.
 \end{itemize}
 
 \section{Description of the algorithms}
@@ -142,10 +139,10 @@ Following the warm-up phase, the agent is trained by playing a certain number of
 \\\\
 The computed loss (MSE) between the expected utility of our agent's actions and the ``true" $Q$-values sampled from our target, is used to update both $Q^{target}$ and $\pi$.
 \\\\
-The update of $\pi$'s parameters are handled by \texttt{torch.optim.Adam}, while the parameters of $Q^{target}$ is updated by
+The update of $\pi$'s parameters are handled by \texttt{torch.optim.Adam}, while the parameters of $Q^{target}$ are updated by
 $$Q^{target} = (1-\tau)Q^{target} + \tau\pi,$$ where $\tau$ is the update value.
 \\\\
-Our \textit{Positional Learning Agent} is trained by playing against the (non-learning) \textit{Positional Player}, while the \textit{Self-Play Agent} is trained by playing its own accumulated $Q$-network.
+Our \textit{Self-Play Agent} us trained by playing its own accumulated \textit{Q}-network, while the \textit{Positional Learning Agent} is trained by playing against the (non-learning) \textit{Positional Player}. These two agents are described in more detail in the following two subsections.
 
 
 \subsection{\label{doc:self_play}$Q$-Network - Self-Play}
@@ -154,13 +151,12 @@ To avoid dealing with the uncertainty of playing an unknown opponent, we impleme
 
 \subsection{\label{doc:positional}$Q$-Network - Positional Learning}
 We also implemented a positional learning player, which learns similarly to the self-playing agent described above. In place of the target network making player 2's move, we have implemented a positional player which makes use of the position value matrix from \cite{vanEck2008} provided below in figure \ref{fig:pos_vals}.
-
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.6\linewidth]{figures/position_vals.png}
 \caption{\label{fig:pos_vals}Position Value Matrix as outlined in \cite{vanEck2008}.}
 \end{figure}
-
+\\
 This takes advantage of some expert knowledge which defines corner squares to be more valuable and positions which give away corner squares to be less valuable. We hypothesized that this would lead to our agent learning the game faster. This will be discussed further in \ref{doc:exp_results}
 
 \section{\label{doc:exp_results}Experimental Results}
@@ -170,7 +166,6 @@ Unfortunately, the results of our experiments did not pan out the way we had exp
 \includegraphics[width=0.9\linewidth]{figures/4x4_model_cumulative_rewards_curve.png}
 \caption{\label{fig:4x4_curve}Running mean plot of a 4x4 learning curve.}
 \end{figure}
-\\\\
 This lead to another promising training curve as seen in figure \ref{fig:8x8_good_curve}.
 \begin{figure}[ht]
     \centering
@@ -184,7 +179,7 @@ After fixing this error, we found that the training had taken a turn towards the
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.9\linewidth]{figures/8x8_current_training_curve.png}
-    \caption{\label{fig:8x8_good_curve}Current running mean plot of an 8x8 learning curve.}
+    \caption{\label{fig:8x8_current_curve}Current running mean plot of an 8x8 learning curve.}
 \end{figure}
 \\\\
 We still tested these models against the two positional players as base-line quality metrics, here are the two winning proportion graphs in figure \ref{fig:winning_rates}. As we can see from the graph from \cite{codes}'s positional player, there does appear to be a slight up-trend throughout the course of training. We have concluded that the positional player presented in \cite{vanEck2008} is a significantly stronger player than the positional player from \cite{codes}. This notion is indeed confirmed in the two plots presented in figure \ref{fig:winning_rates}.
@@ -203,13 +198,13 @@ Based on our results, we believe that it would be beneficial to increase the num
 \\\\
 Additionally, future experiments could involve tuning the hyperparameters in order to get a more accurate and stable model.
 \\\\
-Finally, we think testing different variations on the hidden layers - both in size and in numbers - could be an interesting follow-up of our work. 
+Finally, we think testing different variations on the hidden layers -- both in size and in numbers -- could be an interesting follow-up of our work. 
 
 \section{Conclusion}
 As discussed in our future work section, there are a number of changes which we believe could bring some stronger results to our project. Despite the slight appearance of learning presented and discussed in figure \ref{fig:winning_rates}, it seems that our trained model is struggling to learn throughout the training phase. It suffices to say, that we would need to see the quality of a model with more training iterations before completely nixing the approach which we have taken. It is of course possible that there are some errors in our implementation, however it is often difficult to locate these small niggles in the code, especially after seeing a glimmer of hope. All in all, we have been able to produce an agent which learns with a function approximated $Q$-learning approach, albeit the resulting player is not as strong as we would like it to be.
-
+\\
 Our code base is accessible in \cite{our_code}.
-\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 \printbibliography
 
 \end{document}
