@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from QNetwork import QNetwork
+from Environment.QNetwork import QNetwork
 
 action_board = None  # Create access to the action board for other functions
 

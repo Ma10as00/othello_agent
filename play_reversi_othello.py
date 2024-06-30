@@ -6,6 +6,7 @@ import numpy as np
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 np.random.seed(123)
 
+
 def BestMove(board_state, player, move):
     board = Board()
     board.set_board(board_state)

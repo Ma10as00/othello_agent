@@ -8,8 +8,8 @@
 # FB36 - 20160831
 import copy
 
-from Board import Board
-import utils
+from Environment.Board import Board
+import Environment.utils as utils
 import numpy as np
 import torch
 
@@ -224,10 +224,10 @@ def get_our_move(file_name, board, player, move):
 
 
 def our_self_learned_player(board, player, move):
-    return get_our_move(file_name='8x8_self_learning_agent_models/8x8_model_step_14999.pth',
+    return get_our_move(file_name='pretrained_models/8x8_self_learning_agent_models/8x8_model_step_14999.pth',
                         board=board, player=player, move=move)
 
 
 def our_positional_learned_player(board, player, move):
-    return get_our_move(file_name='8x8_positional_learning_agent_models/8x8_model_step_29999.pth',
+    return get_our_move(file_name='pretrained_models/8x8_positional_learning_agent_models/8x8_model_step_29999.pth',
                         board=board, player=player, move=move)
